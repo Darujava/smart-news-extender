@@ -7,8 +7,13 @@ struct ArticleExtractor {
     }
 
     func extract(from url: URL) async throws -> ArticleContent {
+        let normalizedURL = normalizeInputURL(url)
         DiagnosticStore.shared.log("INFO", "Fetcher started for URL: \(url.absoluteString)")
-        let initialResult = try await fetchHTML(from: url)
+        if normalizedURL != url {
+            DiagnosticStore.shared.log("INFO", "Normalized input URL: \(normalizedURL.absoluteString)")
+        }
+
+        let initialResult = try await fetchHTML(from: normalizedURL)
         DiagnosticStore.shared.log("INFO", "Initial fetch final URL: \(initialResult.finalURL.absoluteString)")
         let resolvedResult = try await resolveIfNeeded(from: initialResult)
         DiagnosticStore.shared.log("INFO", "Resolved fetch URL: \(resolvedResult.finalURL.absoluteString)")
@@ -45,6 +50,16 @@ struct ArticleExtractor {
     }
 
     private func resolveIfNeeded(from result: FetchResult) async throws -> FetchResult {
+        if let redirectURL = normalizeRedirectURL(result.finalURL), redirectURL != result.finalURL {
+            DiagnosticStore.shared.log("INFO", "Resolved redirect URL from final URL: \(redirectURL.absoluteString)")
+            return try await fetchHTML(from: redirectURL)
+        }
+
+        if let externalArticleURL = extractExternalArticleURL(from: result.html, baseURL: result.finalURL) {
+            DiagnosticStore.shared.log("INFO", "Resolved external article URL from HTML: \(externalArticleURL.absoluteString)")
+            return try await fetchHTML(from: externalArticleURL)
+        }
+
         guard shouldResolveSmartNews(url: result.finalURL, html: result.html),
               let destinationURL = extractDestinationURL(from: result.html, baseURL: result.finalURL) else {
             DiagnosticStore.shared.log("INFO", "No secondary destination URL found. Using initial response.")
@@ -77,6 +92,11 @@ struct ArticleExtractor {
             imageURLs: imageURLs
         )
 
+        if isSmartNewsPreview(article: article) {
+            DiagnosticStore.shared.log("ERROR", "Detected SmartNews preview content instead of publisher article.")
+            throw ArticlePipelineError.emptyContent
+        }
+
         guard article.hasReadableContent else {
             DiagnosticStore.shared.log("ERROR", "Readable content check failed for URL: \(sourceURL.absoluteString)")
             throw ArticlePipelineError.emptyContent
@@ -86,7 +106,8 @@ struct ArticleExtractor {
     }
 
     private func shouldResolveSmartNews(url: URL, html: String) -> Bool {
-        if let host = url.host, host.contains("smartnews.com") {
+        if let host = url.host,
+           host.contains("smartnews.com") || host.contains("adjust.com") {
             return true
         }
 
@@ -113,6 +134,153 @@ struct ArticleExtractor {
         }
 
         return nil
+    }
+
+    private func extractExternalArticleURL(from html: String, baseURL: URL) -> URL? {
+        guard let host = baseURL.host?.lowercased(),
+              host.contains("smartnews.com") || host.contains("adjust.com") else {
+            return nil
+        }
+
+        let patterns = [
+            "(?is)href=[\"'](https?://[^\"']+)[\"']",
+            "(?is)content=[\"'](https?://[^\"']+)[\"']",
+            "(?is)https?:\\\\?/\\\\?/[^\\\"'<>\\s]+",
+            "(?is)https?://[^\\\"'<>\\s]+"
+        ]
+
+        var candidates: [URL] = []
+        for pattern in patterns {
+            for raw in allCaptures(in: html, pattern: pattern) {
+                let normalized = raw
+                    .replacingOccurrences(of: "\\/", with: "/")
+                    .trimmingCharacters(in: CharacterSet(charactersIn: "\"' "))
+
+                if let candidate = decodedURL(from: normalized),
+                   isLikelyPublisherURL(candidate, comparedTo: baseURL) {
+                    candidates.append(candidate)
+                }
+            }
+        }
+
+        let scoredCandidates = candidates
+            .map { ($0, scoreExternalURL($0)) }
+            .sorted { lhs, rhs in lhs.1 > rhs.1 }
+
+        return scoredCandidates.first?.0
+    }
+
+    private func normalizeInputURL(_ url: URL) -> URL {
+        normalizeRedirectURL(url) ?? url
+    }
+
+    private func normalizeRedirectURL(_ url: URL) -> URL? {
+        var visited = Set<String>()
+        var current = url
+
+        while visited.insert(current.absoluteString).inserted {
+            guard let next = nestedRedirectURL(in: current), next != current else {
+                break
+            }
+            current = next
+        }
+
+        return current == url ? nil : current
+    }
+
+    private func nestedRedirectURL(in url: URL) -> URL? {
+        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: true),
+              let items = components.queryItems, !items.isEmpty else {
+            return nil
+        }
+
+        let preferredKeys = [
+            "adj_redirect_ios",
+            "adj_redirect",
+            "adj_redirect_android",
+            "adj_redirect_macos",
+            "url",
+            "redirect",
+            "redirect_url",
+            "target",
+            "target_url",
+            "dest",
+            "destination"
+        ]
+
+        for key in preferredKeys {
+            if let value = items.first(where: { $0.name == key })?.value,
+               let candidate = decodedURL(from: value) {
+                return candidate
+            }
+        }
+
+        for item in items {
+            if let value = item.value, let candidate = decodedURL(from: value) {
+                return candidate
+            }
+        }
+
+        return nil
+    }
+
+    private func decodedURL(from rawValue: String) -> URL? {
+        let candidates = [
+            rawValue,
+            rawValue.removingPercentEncoding ?? rawValue,
+            (rawValue.removingPercentEncoding ?? rawValue).removingPercentEncoding ?? rawValue
+        ]
+
+        for candidate in candidates {
+            if let url = URL(string: candidate), url.scheme?.hasPrefix("http") == true {
+                return url
+            }
+        }
+
+        return nil
+    }
+
+    private func isLikelyPublisherURL(_ url: URL, comparedTo baseURL: URL) -> Bool {
+        guard let host = url.host?.lowercased(),
+              let scheme = url.scheme?.lowercased(),
+              scheme == "http" || scheme == "https" else {
+            return false
+        }
+
+        if host.contains("smartnews.com") || host.contains("adjust.com") {
+            return false
+        }
+
+        if url == baseURL {
+            return false
+        }
+
+        let blockedHosts = [
+            "apple.com",
+            "itunes.apple.com",
+            "apps.apple.com",
+            "facebook.com",
+            "instagram.com",
+            "twitter.com",
+            "x.com"
+        ]
+
+        return !blockedHosts.contains(where: host.contains)
+    }
+
+    private func scoreExternalURL(_ url: URL) -> Int {
+        let absolute = url.absoluteString.lowercased()
+        var score = 0
+
+        if let host = url.host?.lowercased(), !host.contains("smartnews.com") {
+            score += 8
+        }
+        if absolute.contains("placement=article-preview-social") { score -= 10 }
+        if absolute.contains("/article/") { score -= 6 }
+        if absolute.contains("utm_source=share_ios_other") { score += 4 }
+        if absolute.contains("news") || absolute.contains("article") { score += 2 }
+
+        return score
     }
 
     private func sanitizeHTML(_ html: String) -> String {
@@ -346,6 +514,24 @@ struct ArticleExtractor {
         }
 
         return normalized
+    }
+
+    private func isSmartNewsPreview(article: ArticleContent) -> Bool {
+        guard let host = article.sourceURL.host?.lowercased(), host.contains("smartnews.com") else {
+            return false
+        }
+
+        let joined = ([article.title] + article.bodyParagraphs).joined(separator: " ").lowercased()
+        let brandingSignals = [
+            "smartnews",
+            "article-preview-social",
+            "open in app",
+            "download app"
+        ]
+
+        let mostlyBranding = brandingSignals.contains { joined.contains($0) }
+        let veryShort = article.bodyParagraphs.count <= 2
+        return mostlyBranding || veryShort
     }
 
     private func htmlToPlainText(_ html: String) -> String {

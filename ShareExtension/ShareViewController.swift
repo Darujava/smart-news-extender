@@ -6,9 +6,6 @@ import os
 
 final class ShareViewController: UIViewController {
     private let logger = Logger(subsystem: "com.example.SmartNewsToGoodNotes", category: "ShareExtension")
-    private let extractor = ArticleExtractor()
-    private let webViewLoader = WebViewArticleLoader()
-    private let pdfGenerator = PDFGenerator()
     private let statusLabel = UILabel()
     private let spinner = UIActivityIndicatorView(style: .large)
     private let logTextView = UITextView()
@@ -67,23 +64,13 @@ final class ShareViewController: UIViewController {
         do {
             let url = try await extractSharedURL()
             logInfo("Selected shared URL: \(url.absoluteString)")
-            await updateStatus("記事を解析しています…")
-            let article: ArticleContent
-
-            do {
-                article = try await extractor.extract(from: url)
-            } catch {
-                logInfo("Direct extraction failed. Trying WKWebView fallback.")
-                let loadedPage = try await webViewLoader.load(url: url)
-                logInfo("WKWebView final URL: \(loadedPage.url.absoluteString)")
-                article = try extractor.extract(fromHTML: loadedPage.html, sourceURL: loadedPage.url)
+            guard PendingShareStore.shared.save(url) else {
+                throw ArticlePipelineError.hostAppLaunchFailed
             }
-
-            await updateStatus("PDFを生成しています…")
-            let pdfURL = try await pdfGenerator.generatePDF(for: article)
-
-            await updateStatus("共有シートを開いています…")
-            await presentShareSheet(for: pdfURL)
+            logInfo("Saved shared URL into App Group store.")
+            await updateStatus("URLを保存しました。本体アプリを開いて処理を続けてください。")
+            spinner.stopAnimating()
+            extensionContext?.completeRequest(returningItems: nil)
         } catch {
             logError("Share flow failed: \(error.localizedDescription)")
             await presentError(error)
@@ -131,21 +118,6 @@ final class ShareViewController: UIViewController {
 
         logError("Failed to resolve a valid URL from shared attachments.")
         throw ArticlePipelineError.invalidURL
-    }
-
-    @MainActor
-    private func presentShareSheet(for pdfURL: URL) {
-        let controller = UIActivityViewController(activityItems: [pdfURL], applicationActivities: nil)
-        controller.completionWithItemsHandler = { [weak self] _, _, _, _ in
-            self?.extensionContext?.completeRequest(returningItems: nil)
-        }
-
-        if let popover = controller.popoverPresentationController {
-            popover.sourceView = view
-            popover.sourceRect = CGRect(x: view.bounds.midX, y: view.bounds.midY, width: 1, height: 1)
-        }
-
-        present(controller, animated: true)
     }
 
     @MainActor

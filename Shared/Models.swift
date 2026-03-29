@@ -12,6 +12,26 @@ struct ArticleContent: Sendable {
     }
 }
 
+struct WebExtractedArticle: Sendable {
+    let sourceURL: URL
+    let title: String
+    let bodyParagraphs: [String]
+    let imageURLs: [URL]
+
+    var asArticleContent: ArticleContent {
+        ArticleContent(
+            sourceURL: sourceURL,
+            title: title,
+            bodyParagraphs: bodyParagraphs,
+            imageURLs: imageURLs
+        )
+    }
+
+    var hasReadableContent: Bool {
+        asArticleContent.hasReadableContent
+    }
+}
+
 enum ArticlePipelineError: LocalizedError {
     case invalidURL
     case unsupportedInput
@@ -19,6 +39,7 @@ enum ArticlePipelineError: LocalizedError {
     case parsingFailed
     case emptyContent
     case pdfGenerationFailed
+    case hostAppLaunchFailed
 
     var errorDescription: String? {
         switch self {
@@ -34,6 +55,8 @@ enum ArticlePipelineError: LocalizedError {
             return "記事本文を抽出できませんでした。"
         case .pdfGenerationFailed:
             return "PDFの生成に失敗しました。"
+        case .hostAppLaunchFailed:
+            return "本体アプリを開けませんでした。アプリを削除して再インストールしてから、もう一度試してください。"
         }
     }
 }

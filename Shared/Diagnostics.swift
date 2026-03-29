@@ -2,7 +2,7 @@ import Foundation
 import Combine
 
 enum AppGroupConfig {
-    static let identifier: String? = nil
+    static let identifier: String? = "group.com.example.SmartNewsToGoodNotes"
 }
 
 struct DiagnosticEntry: Codable, Identifiable, Sendable {

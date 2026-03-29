@@ -21,6 +21,11 @@
 		A1000001000000000000000C /* Diagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000001000000000000000B /* Diagnostics.swift */; };
 		A1000001000000000000000D /* WebViewArticleLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000001000000000000000C /* WebViewArticleLoader.swift */; };
 		A1000001000000000000000E /* WebViewArticleLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000001000000000000000C /* WebViewArticleLoader.swift */; };
+		A1000001000000000000000F /* PendingShareStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000001000000000000000D /* PendingShareStore.swift */; };
+		A10000010000000000000010 /* PendingShareStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000001000000000000000D /* PendingShareStore.swift */; };
+		A10000010000000000000011 /* WebPagePDFRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000010 /* WebPagePDFRenderer.swift */; };
+		A10000010000000000000012 /* ShareHistoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000011 /* ShareHistoryStore.swift */; };
+		A10000010000000000000013 /* ShareHistoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000011 /* ShareHistoryStore.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -60,6 +65,11 @@
 		A2000001000000000000000A /* SmartNewsToGoodNotes.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SmartNewsToGoodNotes.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A2000001000000000000000B /* Diagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Diagnostics.swift; sourceTree = "<group>"; };
 		A2000001000000000000000C /* WebViewArticleLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebViewArticleLoader.swift; sourceTree = "<group>"; };
+		A2000001000000000000000D /* PendingShareStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingShareStore.swift; sourceTree = "<group>"; };
+		A2000001000000000000000E /* SmartNewsToGoodNotes.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SmartNewsToGoodNotes.entitlements; sourceTree = "<group>"; };
+		A2000001000000000000000F /* SmartNewsToGoodNotesShare.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SmartNewsToGoodNotesShare.entitlements; sourceTree = "<group>"; };
+		A20000010000000000000010 /* WebPagePDFRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebPagePDFRenderer.swift; sourceTree = "<group>"; };
+		A20000010000000000000011 /* ShareHistoryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareHistoryStore.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -96,6 +106,7 @@
 				A20000010000000000000001 /* SmartNewsToGoodNotesApp.swift */,
 				A20000010000000000000002 /* ContentView.swift */,
 				A20000010000000000000007 /* Info.plist */,
+				A2000001000000000000000E /* SmartNewsToGoodNotes.entitlements */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -105,6 +116,7 @@
 			children = (
 				A20000010000000000000006 /* ShareViewController.swift */,
 				A20000010000000000000008 /* Info.plist */,
+				A2000001000000000000000F /* SmartNewsToGoodNotesShare.entitlements */,
 			);
 			path = ShareExtension;
 			sourceTree = "<group>";
@@ -117,6 +129,9 @@
 				A20000010000000000000005 /* PDFGenerator.swift */,
 				A2000001000000000000000B /* Diagnostics.swift */,
 				A2000001000000000000000C /* WebViewArticleLoader.swift */,
+				A2000001000000000000000D /* PendingShareStore.swift */,
+				A20000010000000000000010 /* WebPagePDFRenderer.swift */,
+				A20000010000000000000011 /* ShareHistoryStore.swift */,
 			);
 			path = Shared;
 			sourceTree = "<group>";
@@ -216,6 +231,9 @@
 				A10000010000000000000005 /* PDFGenerator.swift in Sources */,
 				A1000001000000000000000B /* Diagnostics.swift in Sources */,
 				A1000001000000000000000D /* WebViewArticleLoader.swift in Sources */,
+				A1000001000000000000000F /* PendingShareStore.swift in Sources */,
+				A10000010000000000000011 /* WebPagePDFRenderer.swift in Sources */,
+				A10000010000000000000012 /* ShareHistoryStore.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -229,6 +247,8 @@
 				A10000010000000000000009 /* PDFGenerator.swift in Sources */,
 				A1000001000000000000000C /* Diagnostics.swift in Sources */,
 				A1000001000000000000000E /* WebViewArticleLoader.swift in Sources */,
+				A10000010000000000000010 /* PendingShareStore.swift in Sources */,
+				A10000010000000000000013 /* ShareHistoryStore.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -339,6 +359,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = NO;
+				CODE_SIGN_ENTITLEMENTS = App/SmartNewsToGoodNotes.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = CDGQ7CKL25;
@@ -359,6 +380,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = NO;
+				CODE_SIGN_ENTITLEMENTS = App/SmartNewsToGoodNotes.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = CDGQ7CKL25;
@@ -379,6 +401,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = ShareExtension/SmartNewsToGoodNotesShare.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = CDGQ7CKL25;
@@ -401,6 +424,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = ShareExtension/SmartNewsToGoodNotesShare.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = CDGQ7CKL25;

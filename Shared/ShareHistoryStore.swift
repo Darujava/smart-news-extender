@@ -6,12 +6,20 @@ struct SharedArticleRecord: Codable, Identifiable, Sendable, Equatable {
     let url: String
     var title: String?
     let createdAt: Date
+    var isPinned: Bool
 
-    init(id: UUID = UUID(), url: String, title: String? = nil, createdAt: Date = .now) {
+    init(
+        id: UUID = UUID(),
+        url: String,
+        title: String? = nil,
+        createdAt: Date = .now,
+        isPinned: Bool = false
+    ) {
         self.id = id
         self.url = url
         self.title = title
         self.createdAt = createdAt
+        self.isPinned = isPinned
     }
 
     var displayTitle: String {
@@ -24,6 +32,10 @@ struct SharedArticleRecord: Codable, Identifiable, Sendable, Equatable {
         }
 
         return url
+    }
+
+    var domain: String {
+        URL(string: url)?.host ?? url
     }
 }
 
@@ -41,6 +53,11 @@ final class ShareHistoryViewModel: ObservableObject {
 
     func clear() {
         ShareHistoryStore.shared.clear()
+        reload()
+    }
+
+    func togglePin(_ record: SharedArticleRecord) {
+        ShareHistoryStore.shared.togglePin(for: record.id)
         reload()
     }
 }
@@ -67,23 +84,15 @@ final class ShareHistoryStore {
                 id: existing.id,
                 url: existing.url,
                 title: title ?? existing.title,
-                createdAt: .now
+                createdAt: .now,
+                isPinned: existing.isPinned
             )
-            records.insert(updated, at: 0)
+            records.append(updated)
         } else {
-            records.insert(
-                SharedArticleRecord(url: url.absoluteString, title: title),
-                at: 0
-            )
+            records.append(SharedArticleRecord(url: url.absoluteString, title: title))
         }
 
-        if records.count > 100 {
-            records = Array(records.prefix(100))
-        }
-
-        if let data = try? encoder.encode(records) {
-            defaults.set(data, forKey: key)
-        }
+        save(records, into: defaults)
     }
 
     func updateTitle(for url: URL, title: String) {
@@ -93,12 +102,18 @@ final class ShareHistoryStore {
         if let index = records.firstIndex(where: { $0.url == url.absoluteString }) {
             records[index].title = title
         } else {
-            records.insert(SharedArticleRecord(url: url.absoluteString, title: title), at: 0)
+            records.append(SharedArticleRecord(url: url.absoluteString, title: title))
         }
 
-        if let data = try? encoder.encode(records) {
-            defaults.set(data, forKey: key)
-        }
+        save(records, into: defaults)
+    }
+
+    func togglePin(for id: UUID) {
+        guard let defaults else { return }
+        var records = load()
+        guard let index = records.firstIndex(where: { $0.id == id }) else { return }
+        records[index].isPinned.toggle()
+        save(records, into: defaults)
     }
 
     func load() -> [SharedArticleRecord] {
@@ -107,10 +122,23 @@ final class ShareHistoryStore {
               let records = try? decoder.decode([SharedArticleRecord].self, from: data) else {
             return []
         }
-        return records
+
+        return records.sorted { lhs, rhs in
+            if lhs.isPinned != rhs.isPinned {
+                return lhs.isPinned && !rhs.isPinned
+            }
+            return lhs.createdAt > rhs.createdAt
+        }
     }
 
     func clear() {
         defaults?.removeObject(forKey: key)
+    }
+
+    private func save(_ records: [SharedArticleRecord], into defaults: UserDefaults) {
+        let trimmed = Array(records.suffix(100))
+        if let data = try? encoder.encode(trimmed) {
+            defaults.set(data, forKey: key)
+        }
     }
 }

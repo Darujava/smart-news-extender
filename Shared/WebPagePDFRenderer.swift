@@ -445,3 +445,74 @@ private extension WKWebView {
         }
     }
 }
+#if DEBUG
+import SwiftUI
+
+private struct WebPagePDFRendererPreviewView: View {
+    @State private var urlString: String = "https://www.example.com"
+    @State private var status: String = "未実行"
+    @State private var pdfURL: URL?
+    @State private var isRunning = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("WebPagePDFRenderer プレビュー").font(.headline)
+            TextField("URL を入力", text: $urlString)
+                .textFieldStyle(.roundedBorder)
+                .disableAutocorrection(true)
+                .textInputAutocapitalization(.never)
+
+            HStack {
+                Button(action: run) {
+                    Label("PDF 生成", systemImage: "doc.richtext")
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(isRunning)
+
+                if isRunning { ProgressView().progressViewStyle(.circular) }
+            }
+
+            Text("ステータス: \(status)")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            if let pdfURL {
+                Text("出力: \(pdfURL.lastPathComponent)")
+                    .font(.caption)
+                ShareLink(item: pdfURL) { Label("PDF を共有", systemImage: "square.and.arrow.up") }
+            }
+
+            Spacer()
+        }
+        .padding()
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func run() {
+        guard let url = URL(string: urlString) else {
+            status = "URL が不正です"
+            return
+        }
+        isRunning = true
+        status = "生成中…"
+        pdfURL = nil
+
+        Task { @MainActor in
+            let renderer = WebPagePDFRenderer()
+            do {
+                let result = try await renderer.renderPage(url: url)
+                pdfURL = result.pdfURL
+                status = "成功: \(result.title ?? "(無題)")"
+            } catch {
+                status = "失敗: \(error.localizedDescription)"
+            }
+            isRunning = false
+        }
+    }
+}
+
+#Preview("WebPagePDFRenderer") {
+    WebPagePDFRendererPreviewView()
+}
+#endif
+

@@ -3,7 +3,7 @@ import Foundation
 final class PendingShareStore {
     static let shared = PendingShareStore()
 
-    private let key = "pending.shared.article.url"
+    private let key = "pending.shared.article.urls"
 
     var isAvailable: Bool {
         defaults != nil
@@ -19,22 +19,37 @@ final class PendingShareStore {
         guard let defaults else {
             return false
         }
-        defaults.set(url.absoluteString, forKey: key)
+        var urls = loadAll().map(\.absoluteString)
+        urls.append(url.absoluteString)
+        defaults.set(urls, forKey: key)
         ShareHistoryStore.shared.add(url: url)
         return true
     }
 
     func load() -> URL? {
-        guard let rawValue = defaults?.string(forKey: key) else {
-            return nil
+        loadAll().first
+    }
+
+    func loadAll() -> [URL] {
+        guard let values = defaults?.stringArray(forKey: key) else {
+            return []
         }
-        return URL(string: rawValue)
+        return values.compactMap(URL.init(string:))
     }
 
     func consume() -> URL? {
-        let url = load()
-        clear()
+        guard let defaults else { return nil }
+        var urls = loadAll().map(\.absoluteString)
+        guard let first = urls.first, let url = URL(string: first) else {
+            return nil
+        }
+        urls.removeFirst()
+        defaults.set(urls, forKey: key)
         return url
+    }
+
+    var pendingCount: Int {
+        loadAll().count
     }
 
     func clear() {

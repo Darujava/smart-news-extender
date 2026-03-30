@@ -1,4 +1,4 @@
-# SmartNews to GoodNotes (iOS)
+# PDFix (iOS)
 
 SmartNews などの共有シートから URL を受け取り、iOS アプリ内で履歴管理しつつ、表示中のページを PDF 化して GoodNotes などへ共有するためのサンプル実装です。
 
@@ -68,6 +68,12 @@ App 本体と Share Extension の両方で `App Groups` を追加し、同じ gr
 ### 3. 外部依存
 - 外部ライブラリ不要
 - 標準フレームワークのみ
+
+## GitHub / CI
+- GitHub Actions 用のワークフローは `.github/workflows/ios-ci.yml`
+- `ios/SmartNewsToGoodNotes` 配下に変更が入ると CI が走る
+- CI では iOS Simulator 向けに `xcodebuild` を実行する
+- コード署名は `CODE_SIGNING_ALLOWED=NO` で無効化しているため、GitHub 上でもビルド確認だけ回せる
 
 ## 動作フロー
 
